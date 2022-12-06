@@ -18,11 +18,11 @@
     get_url:
       url: https://www.redhat.com/security/data/oval/v2/RHEL8/rhel-8.oval.xml.bz2
       dest: /tmp/rhel-8.oval.xml.bz2
-      mode: 664
+      mode: 644
   
-  - name: Decompress OVAL definitions
-    command:
-      cmd: bzip2 --decompress /tmp/rhel-8.oval.xml.bz2 > rhel-8.oval.xml
+#  - name: Decompress OVAL definitions
+#    command:
+#      cmd: bzip2 --decompress /tmp/rhel-8.oval.xml.bz2 > rhel-8.oval.xml
  
   - name: Scan System and save results to vulnerabilities.html
     command:
