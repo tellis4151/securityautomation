@@ -1,6 +1,6 @@
 ---
 - name: Install OpenSCAP
-  host: webservers
+  hosts: webservers
   become: true
 
   tasks:
