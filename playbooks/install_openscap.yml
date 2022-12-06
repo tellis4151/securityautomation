@@ -13,11 +13,19 @@
     yum: 
       name: scap-security-guide
       state: latest
+
+  - name: Change directory
+    command:
+      cmd: chdir: /tmp
   
   - name: Download the latest RHSA OVAL definitions 
     command:
-      cmd: wget -O - https://www.redhat.com/security/data/oval/v2/RHEL8/rhel-8.oval.xml.bz2 | bzip2 --decompress > /tmp/rhel-8.oval.xml 
-   
+      cmd: wget -O - https://www.redhat.com/security/data/oval/v2/RHEL8/rhel-8.oval.xml.bz2  
+  
+  - name: Decompress OVAL definitions
+    command:
+      cmd: bzip2 --decompress /tmp/rhel-8.oval.xml.bz2 > rhel-8.oval.xml
+ 
   - name: Scan System and save results to vulnerabilities.html
     command:
       cmd: oscap oval eval --report /tmp/vulnerability.html /tmp/rhel-8.oval.xml
