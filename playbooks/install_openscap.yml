@@ -1,0 +1,15 @@
+---
+- name: Install OpenSCAP
+  host: webservers
+  become: true
+
+  tasks:
+  - name: Installing OpenSCAP Scanner
+    yum:
+      name: openscap-scanner
+      state: latest
+
+  - name: Install OpenSCAP Security Guide
+    yum: 
+      name: scap-security-guide
+      state: latest
