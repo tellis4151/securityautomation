@@ -15,8 +15,10 @@
       state: latest
 
   - name: Download the latest RHSA OVAL definitions 
-    command:
-      cmd: wget -O - https://www.redhat.com/security/data/oval/v2/RHEL8/rhel-8.oval.xml.bz2  > /tmp/rhel-8.oval.xml.bz2
+    get_url:
+      url: https://www.redhat.com/security/data/oval/v2/RHEL8/rhel-8.oval.xml.bz2
+      dest: /tmp/rhel-8.oval.xml.bz2
+      mode: 664
   
   - name: Decompress OVAL definitions
     command:
