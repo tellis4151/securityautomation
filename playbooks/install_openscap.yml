@@ -30,4 +30,4 @@
  
 #  - name: Scan System and save results to vulnerabilities.html
 #    command:
-#      cmd: oscap oval eval --report /tmp/vulnerability.html /tmp/rhel-8.oval.xml
+#      cmd: oscap oval eval --report /tmp/vulnerability_{{ timestamp.stdout }}.html /tmp/rhel-8.oval.xml_{{ timestamp.stdout }}
