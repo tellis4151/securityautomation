@@ -22,7 +22,7 @@
   
   - name: Decompress OVAL definitions
     command:
-      cmd: bzip2 --decompress /tmp/rhel-8.oval.xml.bz2 > /tmp/rhel-8.oval.xml
+      cmd: bzip2 --decompress /tmp/rhel-8.oval.xml.bz2
  
   - name: Scan System and save results to vulnerabilities.html
     command:
