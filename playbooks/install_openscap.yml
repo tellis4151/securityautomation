@@ -28,6 +28,6 @@
     command:
       cmd: bzip2 --decompress /tmp/rhel-8.oval.xml_{{ timestamp.stdout }}.bz2
  
-#  - name: Scan System and save results to vulnerabilities.html
-#    command:
-#      cmd: oscap oval eval --report /tmp/vulnerability_{{ timestamp.stdout }}.html /tmp/rhel-8.oval.xml_{{ timestamp.stdout }}
+  - name: Scan System and save results to vulnerabilities.html
+    command:
+      cmd: oscap oval eval --report /tmp/vulnerability_{{ timestamp.stdout }}.html /tmp/rhel-8.oval.xml_{{ timestamp.stdout }}
