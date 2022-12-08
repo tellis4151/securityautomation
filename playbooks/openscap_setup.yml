@@ -1,0 +1,33 @@
+---
+- name: OpenSCAP Install & Scanning
+  hosts: webservers
+  become: true
+
+  tasks:
+  - name: Installing OpenSCAP Scanner
+    yum:
+      name: openscap-scanner
+      state: latest
+
+  - name: Install OpenSCAP Security Guide
+    yum: 
+      name: scap-security-guide
+      state: latest
+  
+  - name: Get timestamp
+    command: date +%Y%m%d%T
+    register: timestamp
+
+  - name: Create OpenSCAP Directory
+    file:
+      path: /openscap
+      state: directory
+      mode: "775"
+ 
+  - name: Scan System Against DISA STIG and generate Report
+    command:
+      cmd: oscap xccdf eval --report /openscap/rhel8-stig-report-{{ timestamp.stdout }}.html --profile stig usr/share/xml/scap/ssg/content/ssg-rhel8-ds.xml
+ 
+  - name: Generate remediation Playbook
+    command:
+      cmd: oscap xccdf generate fix --fix-type ansible --profile stig --output /openscap/rhel8-stig-remediations{{ timestamp.stdout }}.yml /openscap/rhel8-stig-results-{{ timestamp.stdout }}.xml
