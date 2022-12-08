@@ -23,6 +23,16 @@
       path: /openscap
       state: directory
       mode: "775"
+
+  - name: Download the latest RHSA OVAL definitions 
+    get_url:
+      url: https://www.redhat.com/security/data/oval/v2/RHEL8/rhel-8.oval.xml.bz2
+      dest: /openscap/rhel-8.oval.xml_{{ timestamp.stdout }}.bz2
+      mode: 644
+  
+  - name: Decompress OVAL definitions
+    command:
+      cmd: bzip2 --decompress /openscap/rhel-8.oval.xml_{{ timestamp.stdout }}.bz2
  
   - name: Scan System Against DISA STIG and generate Report
     command:
