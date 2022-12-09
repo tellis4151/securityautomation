@@ -15,7 +15,7 @@
       state: latest
   
   - name: Get timestamp
-    command: date +%Y%m%d%T
+    command: date +%Y%m%d
     register: timestamp
 
   - name: Create OpenSCAP Directory
@@ -37,6 +37,7 @@
   - name: Scan System Against DISA STIG and generate Report
     command:
       cmd: oscap xccdf eval --report /openscap/rhel8-stig-report-{{ timestamp.stdout }}.html --profile stig /usr/share/xml/scap/ssg/content/ssg-rhel8-ds.xml
+    ignore_errors: true
  
   - name: Generate remediation Playbook
     command:
