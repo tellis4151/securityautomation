@@ -24,21 +24,11 @@
       state: directory
       mode: "775"
 
-  - name: Download the latest RHSA OVAL definitions 
-    get_url:
-      url: https://www.redhat.com/security/data/oval/v2/RHEL8/rhel-8.oval.xml.bz2
-      dest: /openscap/rhel-8.oval.xml_{{ timestamp.stdout }}.bz2
-      mode: 644
-  
-  - name: Decompress OVAL definitions
-    command:
-      cmd: bzip2 --decompress /openscap/rhel-8.oval.xml_{{ timestamp.stdout }}.bz2
- 
   - name: Scan System Against DISA STIG and generate Report
     command:
-      cmd: oscap xccdf eval --results /openscap/rhel8-stig-results-{{ timestamp.stdout }}.xml --profile stig /usr/share/xml/scap/ssg/content/ssg-rhel8-ds.xml
+      cmd: oscap xccdf eval --results /openscap/rhel8-stig-results-{{ timestamp.stdout }}.xml --report /openscap/{{ profile }}_report.html --profile {{ profile }} /usr/share/xml/scap/ssg/content/ssg-rhel8-ds.xml
     ignore_errors: true
  
   - name: Generate remediation Playbook
     command:
-      cmd: oscap xccdf generate fix --fix-type ansible --profile stig --output /openscap/rhel8-stig-remediations{{ timestamp.stdout }}.yml /openscap/rhel8-stig-results-{{ timestamp.stdout }}.xml
+      cmd: oscap xccdf generate fix --fix-type {{ fix_type }} --profile {{ profile }} --output /openscap/rhel8-stig-remediations{{ timestamp.stdout }}.yml /openscap/rhel8-stig-results-{{ timestamp.stdout }}.xml
