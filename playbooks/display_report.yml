@@ -10,6 +10,7 @@
       dest: /var/www/html/{{ profile }}.html
       owner: apache
       mode: "664"
+      remote_src: yes
    
   - name: Restart Apache
     service:
