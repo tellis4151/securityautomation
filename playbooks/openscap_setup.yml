@@ -26,9 +26,9 @@
 
   - name: Scan System Against DISA STIG and generate Report
     command:
-      cmd: oscap xccdf eval --results /openscap/rhel8-stig-results-{{ timestamp.stdout }}.xml --report /openscap/{{ profile }}_report.html --profile {{ profile }} /usr/share/xml/scap/ssg/content/ssg-rhel8-ds.xml
+      cmd: oscap xccdf eval --results /openscap/rhel8-{{ profile }}-results-{{ timestamp.stdout }}.xml --report /openscap/{{ profile }}_report.html --profile {{ profile }} /usr/share/xml/scap/ssg/content/ssg-rhel8-ds.xml
     ignore_errors: true
  
   - name: Generate remediation Playbook
     command:
-      cmd: oscap xccdf generate fix --fix-type {{ fix_type }} --profile {{ profile }} --output /openscap/rhel8-stig-remediations{{ timestamp.stdout }}.yml /openscap/rhel8-stig-results-{{ timestamp.stdout }}.xml
+      cmd: oscap xccdf generate fix --fix-type {{ fix_type }} --profile {{ profile }} --output /openscap/rhel8-{{ profile }}-remediations{{ timestamp.stdout }}.yml /openscap/rhel8-{{ profile }}-results-{{ timestamp.stdout }}.xml
