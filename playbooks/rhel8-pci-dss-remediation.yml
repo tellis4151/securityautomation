@@ -26,6 +26,7 @@
 
 
 - hosts: appservers
+  become: true
   vars:
     var_system_crypto_policy: !!str DEFAULT
     inactivity_timeout_value: !!str 900
