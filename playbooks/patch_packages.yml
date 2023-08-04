@@ -1,0 +1,33 @@
+---
+- name: Upgrading Packages
+  hosts: webservers
+  become: true
+  gather_facts: false
+
+  tasks:
+  - name: Upgrade Packages
+    dnf:
+      name: '*'
+      state: latest
+      update_cache: yes
+      update_only: no
+    register: reg_dnf_output_upgrade
+    when: ev_security_only == "no"
+
+  - name: List Packages 
+    debug:
+      msg: "{{ reg_dnf_output_upgrade.results | map(attribute='name') | list }}"
+
+  - name: Patch Packages
+    dnf:
+      name: '*'
+      security: yes
+      state: latest
+      update_cache: yes
+      update_only: no
+    register: reg_dnf_output_security
+    when: ev_security_only == "yes"
+
+  - name: List Security Packages
+    debug:
+      msg: "{{ reg_dnf_output_security.results | map(attribute='name') | list }}"
