@@ -15,7 +15,7 @@
 
   - name: List Packages 
     debug:
-      msg: "{{ reg_dnf_output_upgrade.results | map(attribute='name') | list }}"
+      msg: "{{ reg_dnf_output_upgrade.results | list }}"
 
   - name: Patch Packages
     dnf:
@@ -28,4 +28,4 @@
 
   - name: List Security Packages
     debug:
-      msg: "{{ reg_dnf_output_security.results | map(attribute='name') | list }}"
+      msg: "{{ reg_dnf_output_security.results | list }}"
