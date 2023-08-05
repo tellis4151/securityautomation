@@ -16,16 +16,3 @@
   - name: List Packages 
     debug:
       msg: "{{ reg_dnf_output_upgrade.results | list }}"
-
-  - name: Patch Packages
-    dnf:
-      name: '*'
-      security: yes
-      state: latest
-      update_cache: yes
-      update_only: no
-    register: reg_dnf_output_security
-
-  - name: List Security Packages
-    debug:
-      msg: "{{ reg_dnf_output_security.results | list }}"
