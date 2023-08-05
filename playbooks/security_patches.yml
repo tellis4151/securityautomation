@@ -1,6 +1,6 @@
 ---
 - name: Patch Packages
-  hosts: webserver
+  hosts: webservers
   become: true
   gather_facts: false
 
