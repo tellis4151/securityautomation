@@ -2527,6 +2527,7 @@
         path: /etc/sudoers.d
         patterns: '*'
         contains: ^[\s]*Defaults\s.*\btimestamp_timeout=.*
+      ignore_errors: true
       register: sudoers_d_defaults_timestamp_timeout
       tags:
       - CCE-87838-9
@@ -2556,6 +2557,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudo_require_reauthentication
+      ignore_errors: true
 
     - name: Ensure timestamp_timeout is enabled with the appropriate value in /etc/sudoers
       lineinfile:
@@ -2565,6 +2567,7 @@
         validate: /usr/sbin/visudo -cf %s
         backrefs: true
       register: edit_sudoers_timestamp_timeout_option
+      ignore_errors: true
       tags:
       - CCE-87838-9
       - DISA-STIG-RHEL-08-010384
@@ -2592,6 +2595,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudo_require_reauthentication
+      ignore_errors: true
 
 
     - name: Check for duplicate values
@@ -2602,6 +2606,7 @@
         state: absent
       check_mode: true
       changed_when: false
+      ignore_errors: true
       register: dupes
       tags:
       - CCE-86377-9
@@ -2629,6 +2634,7 @@
       - medium_severity
       - no_reboot_needed
       - sudoers_default_includedir
+      ignore_errors: true
 
     - name: Insert correct line into /etc/sudoers
       lineinfile:
@@ -2646,6 +2652,7 @@
       - medium_severity
       - no_reboot_needed
       - sudoers_default_includedir
+      ignore_errors: true
 
     - name: Ensure sudoers doesn't include other non-default file
       lineinfile:
@@ -2662,6 +2669,7 @@
       - medium_severity
       - no_reboot_needed
       - sudoers_default_includedir
+      ignore_errors: true
 
     - name: Find out if /etc/sudoers.d/* files contain file or directory includes
       find:
@@ -2678,6 +2686,7 @@
       - medium_severity
       - no_reboot_needed
       - sudoers_default_includedir
+      ignore_errors: true
 
     - name: Remove found occurrences of file and directory includes from /etc/sudoers.d/*
         files
@@ -2695,6 +2704,7 @@
       - medium_severity
       - no_reboot_needed
       - sudoers_default_includedir
+      ignore_errors: true
 
 
     - name: Find out if /etc/sudoers.d/* files contain Defaults !targetpw to be deduplicated
@@ -2703,6 +2713,7 @@
         patterns: '*'
         contains: ^Defaults !targetpw$
       register: sudoers_d_defaults
+      ignore_errors: true
       tags:
       - CCE-83422-6
       - DISA-STIG-RHEL-08-010383
@@ -2732,6 +2743,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
     - name: Find out if /etc/sudoers.d/* files contain Defaults !rootpw to be deduplicated
       find:
@@ -2739,6 +2751,7 @@
         patterns: '*'
         contains: ^Defaults !rootpw$
       register: sudoers_d_defaults
+      ignore_errors: true
       tags:
       - CCE-83422-6
       - DISA-STIG-RHEL-08-010383
@@ -2768,6 +2781,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
     - name: Find out if /etc/sudoers.d/* files contain Defaults !runaspw to be deduplicated
       find:
@@ -2786,6 +2800,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
     - name: Remove found occurrences of Defaults !runaspw from /etc/sudoers.d/* files
       lineinfile:
@@ -2804,6 +2819,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
     - name: Check for duplicate values
       lineinfile:
@@ -2813,6 +2829,7 @@
         state: absent
       check_mode: true
       changed_when: false
+      ignore_errors: true
       register: dupes
       tags:
       - CCE-83422-6
@@ -2844,6 +2861,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
     - name: Insert correct line into /etc/sudoers
       lineinfile:
@@ -2863,6 +2881,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
     - name: Check for duplicate values
       lineinfile:
@@ -2873,6 +2892,7 @@
       check_mode: true
       changed_when: false
       register: dupes
+      ignore_errors: true
       tags:
       - CCE-83422-6
       - DISA-STIG-RHEL-08-010383
@@ -2903,6 +2923,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
     - name: Insert correct line into /etc/sudoers
       lineinfile:
@@ -2922,6 +2943,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
     - name: Check for duplicate values
       lineinfile:
@@ -2932,6 +2954,7 @@
       check_mode: true
       changed_when: false
       register: dupes
+      ignore_errors: true
       tags:
       - CCE-83422-6
       - DISA-STIG-RHEL-08-010383
@@ -2962,6 +2985,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
     - name: Insert correct line into /etc/sudoers
       lineinfile:
@@ -2981,6 +3005,7 @@
       - no_reboot_needed
       - restrict_strategy
       - sudoers_validate_passwd
+      ignore_errors: true
 
 
     - name: Ensure rng-tools is installed
