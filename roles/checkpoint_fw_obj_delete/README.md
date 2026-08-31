@@ -23,7 +23,7 @@ Here are tested EE definition files ([Firewall_EE](https://github.com/tellis4151
 ## Execution Workflow
 Retrieve Group Objects: Uses check_point.mgmt.cp_mgmt_group_facts to fetch details for groups up to checkpoint_group_fetch_limit.
 
-Filter Empty Groups: Parses returned facts to identify groups where the members list is defined and empty ([]).
+Filter Empty Groups: Parses returned facts to identify groups where the members list is defined and empty.
 
 Query Usage Dependencies: Iterates over empty groups using check_point.mgmt.cp_mgmt_where_used to evaluate object and rulebase references.
 
