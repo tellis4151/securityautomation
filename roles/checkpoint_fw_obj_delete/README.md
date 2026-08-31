@@ -3,7 +3,7 @@ An Ansible role to identify, report, and safely purge empty group objects from a
 
 ## Requirements
 
-* Minimum Ansible version: `2.15`
+* Minimum Ansible version: `2.16`
 * Ansible Collection: check_point.mgmt >= `6.9.0`
 
 ## Role Variables
@@ -18,7 +18,7 @@ Available variables are defined in `defaults/main.yml`:
 ## Dependencies
 
 Execution Environment with checkpoint_mgmt certifed collection.  
-Here are tested EE definition files (./Firewall_EE)
+Here are tested EE definition files (./[Firewall_EE](https://github.com/tellis4151/securityautomation/tree/main/Firewall_EE))
 
 ## Execution Workflow
 Retrieve Group Objects: Uses check_point.mgmt.cp_mgmt_group_facts to fetch details for groups up to checkpoint_group_fetch_limit.
