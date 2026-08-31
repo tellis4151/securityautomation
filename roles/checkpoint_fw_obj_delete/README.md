@@ -3,7 +3,7 @@ An Ansible role to identify, report, and safely purge empty group objects from a
 
 ## Requirements
 
-* Minimum Ansible version: `2.15`
+* Minimum Ansible version: `2.16`
 * Ansible Collection: check_point.mgmt >= `6.9.0`
 
 ## Role Variables
@@ -17,20 +17,21 @@ Available variables are defined in `defaults/main.yml`:
 
 ## Dependencies
 
-None.
+Execution Environment with checkpoint_mgmt certifed collection.  
+Here are tested EE definition files ([Firewall_EE](https://github.com/tellis4151/securityautomation/tree/main/Firewall_EE))
 
 ## Execution Workflow
-Retrieve Group Objects: Uses check_point.mgmt.cp_mgmt_group_facts to fetch details for groups up to checkpoint_group_fetch_limit.
+1. Retrieve Group Objects: Uses check_point.mgmt.cp_mgmt_group_facts to fetch details for groups up to checkpoint_group_fetch_limit.
 
-Filter Empty Groups: Parses returned facts to identify groups where the members list is defined and empty ([]).
+1. Filter Empty Groups: Parses returned facts to identify groups where the members list is defined and empty.
 
-Query Usage Dependencies: Iterates over empty groups using check_point.mgmt.cp_mgmt_where_used to evaluate object and rulebase references.
+1. Query Usage Dependencies: Iterates over empty groups using check_point.mgmt.cp_mgmt_where_used to evaluate object and rulebase references.
 
-Isolate Candidates: Filters results for empty groups where used-in.total equals 0.
+1. Isolate Candidates: Filters results for empty groups where used-in.total equals 0.
 
-Report Candidates: Outputs the list of target groups using ansible.builtin.debug.
+1. Report Candidates: Outputs the list of target groups using ansible.builtin.debug.
 
-Delete and Publish: If checkpoint_enable_delete is true, deletes the candidate groups via check_point.mgmt.cp_mgmt_group and commits the session changes using check_point.mgmt.cp_mgmt_publish.
+1. Delete and Publish: If checkpoint_enable_delete is true, deletes the candidate groups via check_point.mgmt.cp_mgmt_group and commits the session changes using check_point.mgmt.cp_mgmt_publish.
 
 ## Ansible Automation Platform
 **Credentials**:
