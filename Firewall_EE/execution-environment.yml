@@ -1,0 +1,24 @@
+---
+version: 3
+
+build_arg_defaults:
+    ANSIBLE_GALAXY_CLI_COLLECTION_OPTS: '--pre'
+
+images:
+    base_image:
+      name: 'registry.redhat.io/ansible-automation-platform-27/ee-minimal-rhel9:2.20-1783620286'
+
+dependencies:
+    galaxy: requirements.yml
+    python: requirements.txt
+    system: bindep.txt
+    python_interpreter:
+      package_system: python312
+      python_path: /usr/bin/python3.12
+
+additional_build_steps:
+  prepend_base:
+    - RUN rpm -e --nodeps curl-minimal || true
+
+options:
+  package_manager_path: /usr/bin/microdnf
