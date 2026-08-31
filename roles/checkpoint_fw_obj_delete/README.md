@@ -17,7 +17,8 @@ Available variables are defined in `defaults/main.yml`:
 
 ## Dependencies
 
-None.
+Execution Environment with checkpoint_mgmt certifed collection.  
+Here are tested EE definition files (./Firewall_EE)
 
 ## Execution Workflow
 Retrieve Group Objects: Uses check_point.mgmt.cp_mgmt_group_facts to fetch details for groups up to checkpoint_group_fetch_limit.
