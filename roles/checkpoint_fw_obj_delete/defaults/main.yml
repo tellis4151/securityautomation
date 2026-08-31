@@ -1,0 +1,10 @@
+---
+# Maximum number of groups to evaluate per API call
+checkpoint_group_fetch_limit: 500
+# Set to true to execute deletion, or false for dry-run inspection
+checkpoint_enable_delete: true
+# Ansible Connection Settings
+ansible_connection: httpapi
+ansible_network_os: check_point.mgmt.checkpoint
+ansible_httpapi_use_ssl: true
+ansible_httpapi_validate_certs: false

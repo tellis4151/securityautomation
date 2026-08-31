@@ -1,0 +1,29 @@
+---
+galaxy_info:
+  author: Security/Network Automation Team
+  description: Role to identify, report, and purge empty and unused group objects from Check Point Management Servers.
+  company: Internal
+
+  license: Test
+
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: CheckPoint
+      versions:
+        - R80.X
+        - R81.X
+        - R82.X
+
+  galaxy_tags:
+    - checkpoint
+    - firewall
+    - security
+    - network
+    - cleanup
+
+dependencies: []
+
+collections:
+  - name: check_point.mgmt
+    version: ">=6.9.0"
