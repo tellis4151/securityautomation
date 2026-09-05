@@ -3,6 +3,8 @@
 checkpoint_group_fetch_limit: 500
 # Set to true to execute deletion, or false for dry-run inspection
 checkpoint_enable_delete: true
+# Default value for defining target server objects
+target_server_objects: ""
 # Ansible Connection Settings
 ansible_connection: httpapi
 ansible_network_os: check_point.mgmt.checkpoint

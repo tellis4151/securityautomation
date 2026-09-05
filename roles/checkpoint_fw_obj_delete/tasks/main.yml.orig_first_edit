@@ -1,0 +1,48 @@
+---
+- name: Retrieve all Check Point group objects
+  check_point.mgmt.cp_mgmt_group_facts:
+    details_level: full
+    limit: "{{ checkpoint_group_fetch_limit }}"
+  register: group_query
+
+- name: Filter for empty group objects
+  ansible.builtin.set_fact:
+    empty_groups: "{{ (group_query.ansible_facts.checkpoint_groups | default(group_query.checkpoint_groups | default([]))) | selectattr('members', 'defined') | selectattr('members', 'equalto', []) | list }}"
+
+- name: Check where empty groups are used
+  check_point.mgmt.cp_mgmt_where_used:
+    name: "{{ item.name }}"
+  loop: "{{ empty_groups }}"
+  register: where_used_query
+  when: empty_groups | length > 0
+
+- name: Identify groups with no rule references
+  ansible.builtin.set_fact:
+    groups_to_delete: >-
+      {{
+        where_used_query.results | default([])
+        | selectattr('cp_mgmt_where_used', 'defined')
+        | selectattr('cp_mgmt_where_used.used-in.total', 'defined')
+        | selectattr('cp_mgmt_where_used.used-in.total', 'equalto', 0)
+        | map(attribute='item.name')
+        | list
+      }}
+
+- name: Display candidates for deletion
+  ansible.builtin.debug:
+    msg: "Found {{ groups_to_delete | length }} empty and unused group(s): {{ groups_to_delete }}"
+
+- name: Delete unused empty group objects
+  check_point.mgmt.cp_mgmt_group:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ groups_to_delete }}"
+  when:
+    - checkpoint_enable_delete | bool
+    - groups_to_delete | length > 0
+
+- name: Publish changes to the Management Server
+  check_point.mgmt.cp_mgmt_publish:
+  when:
+    - checkpoint_enable_delete | bool
+    - groups_to_delete | length > 0

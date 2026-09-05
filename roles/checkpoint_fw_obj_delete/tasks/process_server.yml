@@ -1,0 +1,68 @@
+---
+# Step 1: Get facts/usage for the Server object
+- name: "Query usage facts for server: {{ target_server }}"
+  check_point.mgmt.cp_mgmt_where_used:
+    name: "{{ target_server }}"
+    details_level: full
+  register: server_where_used
+
+# Step 2: Identify and delete groups where this is the ONLY member
+- name: Identify single-member groups containing target server
+  ansible.builtin.set_fact:
+    groups_to_delete: >-
+      {% set grps = [] %}
+      {% set objects = server_where_used.cp_mgmt_where_used['used-in']['objects'] | default([]) %}
+      {% for obj in objects %}
+        {% if obj.type | default('') == 'group' and obj.members is defined and (obj.members | length == 1) %}
+          {% set _ = grps.append(obj.name) %}
+        {% endif %}
+      {% endfor %}
+      {{ grps }}
+
+- name: Delete single-member groups
+  check_point.mgmt.cp_mgmt_group:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ groups_to_delete }}"
+  when:
+    - checkpoint_enable_delete | default(true) | bool
+    - groups_to_delete | length > 0
+
+# Step 3: Identify access rules where this server is sole source OR sole destination
+- name: Identify rules where target server is sole source or sole destination
+  ansible.builtin.set_fact:
+    rules_to_disable: >-
+      {% set rules = [] %}
+      {% set access_rules = server_where_used.cp_mgmt_where_used['used-in']['access-rules'] | default([]) %}
+      {% for rule in access_rules %}
+        {% set src_names = rule.source | map(attribute='name') | list if rule.source is iterable else [] %}
+        {% set dst_names = rule.destination | map(attribute='name') | list if rule.destination is iterable else [] %}
+        {% set is_sole_src = (target_server in src_names) and (src_names | length == 1) %}
+        {% set is_sole_dst = (target_server in dst_names) and (dst_names | length == 1) %}
+        {% if is_sole_src or is_sole_dst %}
+          {% set layer_name = rule.layer.name if (rule.layer is mapping and 'name' in rule.layer) else rule.layer %}
+          {% set _ = rules.append({'uid': rule.uid, 'layer': layer_name}) %}
+        {% endif %}
+      {% endfor %}
+      {{ rules }}
+
+- name: Disable rules where target server is sole source or sole destination
+  check_point.mgmt.cp_mgmt_access_rule:
+    uid: "{{ item.uid }}"
+    layer: "{{ item.layer }}"
+    enabled: false
+  loop: "{{ rules_to_disable }}"
+  when:
+    - checkpoint_enable_delete | default(true) | bool
+    - rules_to_disable | length > 0
+
+# Step 4: Delete the server host object and publish
+- name: "Delete server host object: {{ target_server }}"
+  check_point.mgmt.cp_mgmt_host:
+    name: "{{ target_server }}"
+    state: absent
+  when: checkpoint_enable_delete | default(true) | bool
+
+- name: Publish changes to Management Server
+  check_point.mgmt.cp_mgmt_publish:
+  when: checkpoint_enable_delete | default(true) | bool
