@@ -83,7 +83,7 @@
     - checkpoint_enable_delete | default(false) | bool
     - (groups_to_delete | length > 0) or (rules_to_disable | length > 0)
 
-# Recheck usage after cleanup
+# Step 4 Recheck usage after cleanup
 - name: Recheck server usage
   check_point.mgmt.cp_mgmt_where_used:
     name: "{{ target_server }}"
@@ -102,7 +102,7 @@
       references after cleanup.
   when: checkpoint_enable_delete | default(false) | bool
 
-# Step 4: Delete the server host object and publish
+# Step 5: Delete the server host object and publish
 - name: "Delete server host object: {{ target_server }}"
   check_point.mgmt.cp_mgmt_host:
     name: "{{ target_server }}"
