@@ -4,34 +4,13 @@
   check_point.mgmt.cp_mgmt_where_used:
     name: "{{ target_server }}"
     details_level: full
+    dereference_group_members: true
   register: server_where_used
 
-# Step 2: Identify and delete groups where this is the ONLY member
-- name: Identify single-member groups containing target server
-  ansible.builtin.set_fact:
-    groups_to_delete: >-
-      {% set grps = [] %}
-      {% set objects = server_where_used.cp_mgmt_where_used['used-in']['objects'] | default([]) %}
-      {% for obj in objects %}
-        {% if obj.type | default('') == 'group' and obj.members is defined and (obj.members | length == 1) %}
-          {% set _ = grps.append(obj.name) %}
-        {% endif %}
-      {% endfor %}
-      {{ grps }}
-
-- name: Delete single-member groups
-  check_point.mgmt.cp_mgmt_group:
-    name: "{{ item }}"
-    state: absent
-  loop: "{{ groups_to_delete }}"
-  when:
-    - checkpoint_enable_delete | default(true) | bool
-    - groups_to_delete | length > 0
-
-# Step 3: Identify access rules where this server is sole source OR sole destination
+# Step 2: Identify access rules where this server is sole source OR sole destination
 - name: Identify rules where target server is sole source or sole destination
   ansible.builtin.set_fact:
-    rules_to_disable: >-
+    rules_to_disable_raw: >-
       {% set rules = [] %}
       {% set access_rules = server_where_used.cp_mgmt_where_used['used-in']['access-rules'] | default([]) %}
       {% for rule in access_rules %}
@@ -44,7 +23,17 @@
           {% set _ = rules.append({'uid': rule.uid, 'layer': layer_name}) %}
         {% endif %}
       {% endfor %}
-      {{ rules }}
+      {{ rules | to_json }}
+
+- name: Set parsed rules list
+  ansible.builtin.set_fact:
+    rules_to_disable: "{{ rules_to_disable_raw | from_json }}"
+
+- name: Show planned cleanup
+  ansible.builtin.debug:
+    msg:
+      target_server: "{{ target_server }}"
+      rules_to_disable: "{{ rules_to_disable }}"
 
 - name: Disable rules where target server is sole source or sole destination
   check_point.mgmt.cp_mgmt_access_rule:
@@ -53,16 +42,73 @@
     enabled: false
   loop: "{{ rules_to_disable }}"
   when:
-    - checkpoint_enable_delete | default(true) | bool
+    - checkpoint_enable_delete | default(false) | bool
     - rules_to_disable | length > 0
+
+# Step 3: Identify groups where this is the ONLY member
+- name: Identify single-member groups containing target server
+  ansible.builtin.set_fact:
+    groups_to_delete_raw: >-
+      {% set grps = [] %}
+      {% set objects = server_where_used.cp_mgmt_where_used['used-in']['objects'] | default([]) %}
+      {% for obj in objects %}
+        {% if obj.type | default('') == 'group' and obj.members is defined and (obj.members | length == 1) %}
+          {% set _ = grps.append(obj.name) %}
+        {% endif %}
+      {% endfor %}
+      {{ grps | to_json }}
+
+- name: Set parsed groups list
+  ansible.builtin.set_fact:
+    groups_to_delete: "{{ groups_to_delete_raw | from_json }}"
+
+- name: Show planned Group cleanup
+  ansible.builtin.debug:
+    msg:
+      target_server: "{{ target_server }}"
+      groups_to_delete: "{{ groups_to_delete }}"
+     
+- name: Delete single-member groups
+  check_point.mgmt.cp_mgmt_group:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ groups_to_delete }}"
+  when:
+    - checkpoint_enable_delete | default(false) | bool
+    - groups_to_delete | length > 0
+
+- name: Publish changes to Management Server
+  check_point.mgmt.cp_mgmt_publish:
+  when:
+    - checkpoint_enable_delete | default(false) | bool
+    - (groups_to_delete | length > 0) or (rules_to_disable | length > 0)
+
+# Recheck usage after cleanup
+- name: Recheck server usage
+  check_point.mgmt.cp_mgmt_where_used:
+    name: "{{ target_server }}"
+    details_level: full
+    dereference_group_members: true
+  register: final_server_where_used
+  when: checkpoint_enable_delete | default(false) | bool
+
+# Defensive check: Ensure no references remain before deletion
+- name: Refuse deletion while references remain
+  ansible.builtin.assert:
+    that:
+      - (final_server_where_used.cp_mgmt_where_used['used-in'].total | default(0) | int) == 0
+    fail_msg: >-
+      Refusing to delete {{ target_server }} because Check Point still reports
+      references after cleanup.
+  when: checkpoint_enable_delete | default(false) | bool
 
 # Step 4: Delete the server host object and publish
 - name: "Delete server host object: {{ target_server }}"
   check_point.mgmt.cp_mgmt_host:
     name: "{{ target_server }}"
     state: absent
-  when: checkpoint_enable_delete | default(true) | bool
+  when: checkpoint_enable_delete | default(false) | bool
 
 - name: Publish changes to Management Server
   check_point.mgmt.cp_mgmt_publish:
-  when: checkpoint_enable_delete | default(true) | bool
+  when: checkpoint_enable_delete | default(false) | bool
