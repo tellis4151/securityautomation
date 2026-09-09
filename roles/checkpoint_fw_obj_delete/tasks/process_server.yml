@@ -77,13 +77,14 @@
     - checkpoint_enable_delete | default(false) | bool
     - groups_to_delete | length > 0
 
+# Step 4: Publish changes to Management Server if any deletions were made
 - name: Publish changes to Management Server
   check_point.mgmt.cp_mgmt_publish:
   when:
     - checkpoint_enable_delete | default(false) | bool
     - (groups_to_delete | length > 0) or (rules_to_disable | length > 0)
 
-# Step 4 Recheck usage after cleanup
+# Step 5 Recheck usage after cleanup
 - name: Recheck server usage
   check_point.mgmt.cp_mgmt_where_used:
     name: "{{ target_server }}"
@@ -92,7 +93,7 @@
   register: final_server_where_used
   when: checkpoint_enable_delete | default(false) | bool
 
-# Defensive check: Ensure no references remain before deletion
+# Step 6: Defensive check: Ensure no references remain before deletion
 - name: Refuse deletion while references remain
   ansible.builtin.assert:
     that:
@@ -102,7 +103,7 @@
       references after cleanup.
   when: checkpoint_enable_delete | default(false) | bool
 
-# Step 5: Delete the server host object and publish
+# Step 7: Delete the server host object and publish
 - name: "Delete server host object: {{ target_server }}"
   check_point.mgmt.cp_mgmt_host:
     name: "{{ target_server }}"
