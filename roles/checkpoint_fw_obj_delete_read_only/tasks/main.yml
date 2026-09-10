@@ -1,0 +1,10 @@
+---
+- name: Normalize target_server_objects variable into a list
+  ansible.builtin.set_fact:
+    parsed_server_list: "{{ target_server_objects.split(',') | map('trim') | reject('equalto', '') | list if target_server_objects is string else target_server_objects | default([]) }}"
+
+- name: Process each target server object for decommissioning
+  ansible.builtin.include_tasks: process_server.yml
+  loop: "{{ parsed_server_list }}"
+  loop_control:
+    loop_var: target_server

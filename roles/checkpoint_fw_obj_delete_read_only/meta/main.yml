@@ -1,0 +1,29 @@
+---
+galaxy_info:
+  author: Security/Network Automation Team
+  description: Role to identify, report, and purge decommissioned Server Objects from Check Point Firewalls. This role will identify Server Objects that are no longer in use, report them, and optionally delete them from the firewall configuration. It is designed to help maintain a clean and efficient firewall configuration by removing unused objects.
+  company: Internal
+
+  license: Test
+
+  min_ansible_version: "2.16"
+
+  platforms:
+    - name: Check Point
+      versions:
+        - R80.X
+        - R81.X
+        - R82.X
+
+  galaxy_tags:
+    - checkpoint
+    - firewall
+    - security
+    - network
+    - cleanup
+
+dependencies: []
+
+collections:
+  - name: check_point.mgmt
+    version: ">=6.9.0"

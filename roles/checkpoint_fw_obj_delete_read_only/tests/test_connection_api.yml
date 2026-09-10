@@ -1,0 +1,12 @@
+---
+- name: Test Check Point API Connection
+  hosts: checkpoint_mgmt
+  gather_facts: false
+  tasks:
+    - name: Show API version details
+      check_point.mgmt.cp_mgmt_show_api_versions:
+      register: api_info
+
+    - name: Display API version
+      ansible.builtin.debug:
+        var: api_info.cp_mgmt_show_api_versions.current_version
