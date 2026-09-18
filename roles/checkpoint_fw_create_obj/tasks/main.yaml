@@ -1,0 +1,74 @@
+---
+- name: Normalize address type input
+  ansible.builtin.set_fact:
+    normalized_address_types: >-
+      {{
+        address_type
+        if address_type is defined and address_type is sequence and address_type is not string
+        else [address_type]
+        if address_type is defined and address_type is not none
+        else []
+      }}
+
+- name: Validate required input
+  ansible.builtin.assert:
+    that:
+      - group_name is defined and group_name | length > 0
+      - ip_list is defined and ip_list is sequence and ip_list | length > 0
+      - "'ip-range' not in normalized_address_types or subnet_mask is defined"
+    fail_msg: "Valid group_name and ip_list required. subnet_mask is required when address_type includes ip-range."
+
+- name: Read existing group info
+  check_point.mgmt.cp_mgmt_group_facts:
+    name: '{{ group_name }}'
+    detail_level: standard
+  register: group_output
+  ignore_errors: true
+
+- name: Build existing member list from fact output
+  ansible.builtin.set_fact:
+    existing_group_members: >-
+      {{
+        (group_output.ansible_facts.checkpoint_group.members | map(attribute='name') | list)
+        if (group_output.ansible_facts is defined and group_output.ansible_facts.checkpoint_group is defined)
+        else []
+      }}
+
+- name: Create IP host objects
+  check_point.mgmt.cp_mgmt_host:
+    name: 'HOST-{{ item }}'
+    ip_address: '{{ item }}'
+    color: '{{ checkpoint_color | default("blue") }}'
+    state: present
+  when: "'ip-address' in normalized_address_types"
+  loop: '{{ ip_list }}'
+
+- name: Create IP network objects
+  check_point.mgmt.cp_mgmt_network:
+    name: 'NET-{{ item }}'
+    subnet: '{{ item }}'
+    mask_length: '{{ subnet_mask | int }}'
+    color: '{{ checkpoint_color | default("blue") }}'
+    state: present
+  when: "'ip-range' in normalized_address_types"
+  loop: '{{ ip_list }}'
+
+- name: Calculate formatted new member names
+  ansible.builtin.set_fact:
+    new_member_names: >-
+      {{
+        ((ip_list if 'ip-address' in normalized_address_types else []) | map('regex_replace', '^', 'HOST-') | list)
+        +
+        ((ip_list if 'ip-range' in normalized_address_types else []) | map('regex_replace', '^', 'NET-') | list)
+      }}
+
+- name: Ensure target group exists and updates members
+  check_point.mgmt.cp_mgmt_group:
+    name: '{{ group_name }}'
+    members: >-
+      {{
+        (existing_group_members + new_member_names) | unique
+      }}
+    color: '{{ checkpoint_color | default("blue") }}'
+    auto_publish_session: true
+    state: present

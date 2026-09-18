@@ -1,0 +1,131 @@
+---
+- name: Normalize legacy variable names for backwards compatibility
+  ansible.builtin.set_fact:
+    fortinet_fw_ipv4_addresses: "{{ fortinet_fw_ipv4_addresses | default(ipv4_addresses | default([]), true) }}"
+    fortinet_fw_ipv6_addresses: "{{ fortinet_fw_ipv6_addresses | default(ipv6_addresses | default([]), true) }}"
+    fortinet_fw_ipv4_groups: "{{ fortinet_fw_ipv4_groups | default(ipv4_groups | default([]), true) }}"
+    fortinet_fw_ipv6_groups: "{{ fortinet_fw_ipv6_groups | default(ipv6_groups | default([]), true) }}"
+
+- name: Validate top-level object lists
+  ansible.builtin.assert:
+    that:
+      - fortinet_fw_ipv4_addresses is sequence
+      - fortinet_fw_ipv6_addresses is sequence
+      - fortinet_fw_ipv4_groups is sequence
+      - fortinet_fw_ipv6_groups is sequence
+    fail_msg: "Fortinet firewall object definitions must be lists."
+
+- name: Validate IPv4 address objects
+  ansible.builtin.assert:
+    that:
+      - item.name is defined and item.name | string | length > 0
+      - (item.type | default('ipmask')) in ['ipmask', 'iprange', 'fqdn', 'dynamic']
+      - (item.type | default('ipmask')) != 'ipmask' or item.subnet is defined
+      - (item.type | default('ipmask')) != 'iprange' or (item.start_ip is defined and item.end_ip is defined)
+      - (item.type | default('ipmask')) != 'fqdn' or item.fqdn is defined
+      - (item.type | default('ipmask')) != 'dynamic' or item.tag_type is defined
+    fail_msg: "Invalid IPv4 address definition for {{ item.name | default('unnamed object') }}."
+  loop: "{{ fortinet_fw_ipv4_addresses }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed object') }}"
+
+- name: Validate IPv6 address objects
+  ansible.builtin.assert:
+    that:
+      - item.name is defined and item.name | string | length > 0
+      - (item.type | default('ipprefix')) in ['ipprefix', 'iprange', 'fqdn']
+      - (item.type | default('ipprefix')) != 'ipprefix' or item.ip6 is defined
+      - (item.type | default('ipprefix')) != 'iprange' or (item.start_ip is defined and item.end_ip is defined)
+      - (item.type | default('ipprefix')) != 'fqdn' or item.fqdn is defined
+    fail_msg: "Invalid IPv6 address definition for {{ item.name | default('unnamed object') }}."
+  loop: "{{ fortinet_fw_ipv6_addresses }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed object') }}"
+
+- name: Validate IPv4 group structure
+  ansible.builtin.assert:
+    that:
+      - item.name is defined and item.name | string | length > 0
+      - item.members is defined and item.members is sequence and item.members | length > 0
+    fail_msg: "Invalid IPv4 group structure for {{ item.name | default('unnamed group') }}."
+  loop: "{{ fortinet_fw_ipv4_groups }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed group') }}"
+
+- name: Validate IPv6 group structure
+  ansible.builtin.assert:
+    that:
+      - item.name is defined and item.name | string | length > 0
+      - item.members is defined and item.members is sequence and item.members | length > 0
+    fail_msg: "Invalid IPv6 group structure for {{ item.name | default('unnamed group') }}."
+  loop: "{{ fortinet_fw_ipv6_groups }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed group') }}"
+
+- name: Create IPv4 address and range objects
+  fortinet.fortios.fortios_firewall_address:
+    vdom: "{{ fortinet_fw_vdom | default('root') }}"
+    state: present
+    firewall_address:
+      name: "{{ item.name }}"
+      type: "{{ item.type | default('ipmask') }}"
+      subnet: "{{ item.subnet | default(omit) }}"
+      start_ip: "{{ item.start_ip | default(omit) }}"
+      end_ip: "{{ item.end_ip | default(omit) }}"
+      fqdn: "{{ item.fqdn | default(omit) }}"
+      tenant: "{{ item.tenant | default(omit) }}"
+      epg_name: "{{ item.epg_name | default(omit) }}"
+      policy_group: "{{ item.policy_group | default(omit) }}"
+      tag_type: "{{ item.tag_type | default(omit) }}"
+      color: "{{ item.color | default(1) }}"
+  loop: "{{ fortinet_fw_ipv4_addresses }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: fortinet_fw_ipv4_addresses | length > 0
+
+- name: Create IPv6 address and range objects
+  fortinet.fortios.fortios_firewall_address6:
+    vdom: "{{ fortinet_fw_vdom | default('root') }}"
+    state: present
+    firewall_address6:
+      name: "{{ item.name }}"
+      type: "{{ item.type | default('ipprefix') }}"
+      ip6: "{{ item.ip6 | default(omit) }}"
+      start_ip: "{{ item.start_ip | default(omit) }}"
+      end_ip: "{{ item.end_ip | default(omit) }}"
+      fqdn: "{{ item.fqdn | default(omit) }}"
+      tenant: "{{ item.tenant | default(omit) }}"
+      epg_name: "{{ item.epg_name | default(omit) }}"
+      policy_group: "{{ item.policy_group | default(omit) }}"
+      tag_type: "{{ item.tag_type | default(omit) }}"
+      color: "{{ item.color | default(1) }}"
+  loop: "{{ fortinet_fw_ipv6_addresses }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: fortinet_fw_ipv6_addresses | length > 0
+
+- name: Create IPv4 address groups
+  fortinet.fortios.fortios_firewall_addrgrp:
+    vdom: "{{ fortinet_fw_vdom | default('root') }}"
+    state: present
+    firewall_addrgrp:
+      name: "{{ item.name }}"
+      member: "{{ item.members | map('community.general.dict_kv', 'name') | list }}"
+      color: "{{ item.color | default(1) }}"
+  loop: "{{ fortinet_fw_ipv4_groups }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: fortinet_fw_ipv4_groups | length > 0
+
+- name: Create IPv6 address groups
+  fortinet.fortios.fortios_firewall_addrgrp6:
+    vdom: "{{ fortinet_fw_vdom | default('root') }}"
+    state: present
+    firewall_addrgrp6:
+      name: "{{ item.name }}"
+      member: "{{ item.members | map('community.general.dict_kv', 'name') | list }}"
+      color: "{{ item.color | default(1) }}"
+  loop: "{{ fortinet_fw_ipv6_groups }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: fortinet_fw_ipv6_groups | length > 0

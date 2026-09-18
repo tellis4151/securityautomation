@@ -1,0 +1,9 @@
+---
+# Default connection scope
+fortinet_fw_vdom: root
+
+# Default object lists. Use these in playbooks or override with legacy names.
+fortinet_fw_ipv4_addresses: []
+fortinet_fw_ipv6_addresses: []
+fortinet_fw_ipv4_groups: []
+fortinet_fw_ipv6_groups: []

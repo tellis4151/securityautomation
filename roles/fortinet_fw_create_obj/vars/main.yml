@@ -1,0 +1,42 @@
+---
+fortinet_fw_ipv4_addresses:
+  # Single Host IP Object
+  - name: "HOST-10.0.0.50"
+    type: "ipmask"
+    subnet: "10.0.0.50 255.255.255.255"
+
+  # IP Subnet Object
+  - name: "NET-10.0.0.0-24"
+    type: "ipmask"
+    subnet: "10.0.0.0 255.255.255.0"
+
+  # IP Range Object
+  - name: "RANGE-10.0.0.100-10.0.0.150"
+    type: "iprange"
+    start_ip: "10.0.0.100"
+    end_ip: "10.0.0.150"
+
+fortinet_fw_ipv4_groups:
+  - name: "GRP_INTERNAL_IPV4"
+    members:
+      - "HOST-10.0.0.50"
+      - "NET-10.0.0.0-24"
+      - "RANGE-10.0.0.100-10.0.0.150"
+
+fortinet_fw_ipv6_addresses:
+  # Single Host IPv6 Object
+  - name: "HOST6-2001-db8--50"
+    type: "ipprefix"
+    ip6: "2001:db8::50/128"
+
+  # IPv6 Range Object
+  - name: "RANGE6-2001-db8--100-2001-db8--150"
+    type: "iprange"
+    start_ip: "2001:db8::100"
+    end_ip: "2001:db8::150"
+
+fortinet_fw_ipv6_groups:
+  - name: "GRP_INTERNAL_IPV6"
+    members:
+      - "HOST6-2001-db8--50"
+      - "RANGE6-2001-db8--100-2001-db8--150"
