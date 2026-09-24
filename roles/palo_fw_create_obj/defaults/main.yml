@@ -1,0 +1,6 @@
+---
+provider
+  ip_address: "{{ panos_host }}"
+  username: "{{ panos_username }}"
+  password: "{{ panos_password }}"
+  # api_key: "{{ panos_api_key }}"
