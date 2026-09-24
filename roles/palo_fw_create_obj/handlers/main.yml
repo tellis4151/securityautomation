@@ -1,0 +1,5 @@
+---
+- name: Commit configs on firewall
+  paloaltonetworks.panos.panos_commit_firewall:
+    provider:  "{{ provider }}"
+    description: "Changes committed by Ansible" 
