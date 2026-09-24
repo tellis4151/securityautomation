@@ -1,0 +1,6 @@
+---
+smc_url: "{{ smc_url }}"
+smc_api_key: "{{ smc_api_key }}"
+smc_verify_ssl: false
+smc_extra_args:
+  verify: "{{ smc_verify_ssl  }}"
