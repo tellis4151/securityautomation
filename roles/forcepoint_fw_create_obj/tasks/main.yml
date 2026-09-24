@@ -1,0 +1,100 @@
+---
+# Manage different Network objects in Forcepoint NGFW using Ansible.
+# Objects are created only when they do not already exist.
+
+- name: Query Hosts in Forcepoint NGFW
+  forcepoint.fp_ngfw_smc_ansible.network_element_facts:
+    limit: 0
+    element: host
+  register: forcepoint_hosts_facts
+
+- name: Build existing host names
+  ansible.builtin.set_fact:
+    forcepoint_existing_host_names: >-
+      {{
+        (forcepoint_hosts_facts.elements | default(forcepoint_hosts_facts.hosts | default([])))
+        | selectattr('name', 'defined')
+        | map(attribute='name')
+        | list
+      }}
+
+- name: Create Host in Forcepoint NGFW
+  forcepoint.fp_ngfw_smc_ansible.network_element:
+    smc_logging:
+      level: 10
+      path: ansible-smc.log
+    elements:
+      - host:
+          name: "{{ item.name }}"
+          address: "{{ item.ipv4 }}"
+          ipv6_address: "{{ item.ipv6 | default('') }}"
+          comment: created by Ansible Automation Platform
+          state: present
+  loop: "{{ forcepoint_fw_hosts }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.name not in (forcepoint_existing_host_names | default([]))
+
+- name: Query Ranges in Forcepoint NGFW
+  forcepoint.fp_ngfw_smc_ansible.network_element_facts:
+    limit: 0
+    element: address_range
+  register: forcepoint_ranges_facts
+
+- name: Build existing range names
+  ansible.builtin.set_fact:
+    forcepoint_existing_range_names: >-
+      {{
+        (forcepoint_ranges_facts.elements | default(forcepoint_ranges_facts.address_ranges | default([])))
+        | selectattr('name', 'defined')
+        | map(attribute='name')
+        | list
+      }}
+
+- name: Create Address Range in Forcepoint NGFW
+  forcepoint.fp_ngfw_smc_ansible.network_element:
+    smc_logging:
+      level: 10
+      path: ansible-smc.log
+    elements:
+      - address_range:
+          name: "{{ item.name }}"
+          ip_range: "{{ item.ipv4_range }}"
+          comment: created by Ansible Automation Platform
+          state: present
+  loop: "{{ forcepoint_fw_ranges }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.name not in (forcepoint_existing_range_names | default([]))
+
+- name: Query Groups in Forcepoint NGFW
+  forcepoint.fp_ngfw_smc_ansible.network_element_facts:
+    limit: 0
+    element: group
+  register: forcepoint_groups_facts
+
+- name: Build existing group names
+  ansible.builtin.set_fact:
+    forcepoint_existing_group_names: >-
+      {{
+        (forcepoint_groups_facts.elements | default(forcepoint_groups_facts.groups | default([])))
+        | selectattr('name', 'defined')
+        | map(attribute='name')
+        | list
+      }}
+
+- name: Create Group in Forcepoint NGFW
+  forcepoint.fp_ngfw_smc_ansible.network_element:
+    smc_logging:
+      level: 10
+      path: ansible-smc.log
+    elements:
+      - group:
+          name: "{{ item.name }}"
+          members: "{{ item.members }}"
+          comment: created by Ansible Automation Platform
+          state: present
+  loop: "{{ forcepoint_fw_groups }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.name not in (forcepoint_existing_group_names | default([]))

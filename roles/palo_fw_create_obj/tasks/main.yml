@@ -1,0 +1,121 @@
+---
+- name: Validate Palo Alto object variable structure
+  ansible.builtin.assert:
+    that:
+      - palo_fw_ip_objects is defined and palo_fw_ip_objects is sequence
+      - palo_fw_ip_range_objects is defined and palo_fw_ip_range_objects is sequence
+      - palo_fw_fqdn_objects is defined and palo_fw_fqdn_objects is sequence
+      - palo_fw_address_groups is defined and palo_fw_address_groups is sequence
+    fail_msg: "Palo Alto object definitions must be lists."
+
+- name: Query all Address Objects
+  paloaltonetworks.panos.panos_address_object:
+    provider: "{{ panos_provider }}"
+    state: gathered
+  register: existing_address_objects
+
+- name: Build existing Palo Alto address object names
+  ansible.builtin.set_fact:
+    existing_palo_address_object_names: >-
+      {{
+        (
+          (existing_address_objects.gathered | default([]))
+          + (existing_address_objects.gathered_entries | default([]))
+          + (existing_address_objects.result | default([]))
+        )
+        | selectattr('name', 'defined')
+        | map(attribute='name')
+        | list
+        | unique
+      }}
+
+- name: Print existing Address Objects
+  debug:
+    var: existing_address_objects
+
+- name: Create Palo Alto IP address objects
+  paloaltonetworks.panos.panos_address_object:
+    provider: "{{ provider | default(omit) }}"
+    name: "{{ item.name }}"
+    value: "{{ item.ipv4 }}"
+    description: "{{ item.description | default('') }}"
+    tag: "{{ item.tag | default('') }}"
+    state: present
+  loop: "{{ palo_fw_ip_objects }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - palo_fw_ip_objects | length > 0
+    - item.name not in (existing_palo_address_object_names | default([]))
+
+- name: Create Palo Alto IP range objects
+  paloaltonetworks.panos.panos_address_object:
+    provider: "{{ provider | default(omit) }}"
+    name: "{{ item.name }}"
+    address_type: "{{ item.address_type | default('ip-range') }}"
+    value: "{{ item.ipv4_range }}"
+    description: "{{ item.description | default('') }}"
+    tag: "{{ item.tag | default('') }}"
+    state: present
+  loop: "{{ palo_fw_ip_range_objects }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - palo_fw_ip_range_objects | length > 0
+    - item.name not in (existing_palo_address_object_names | default([]))
+
+- name: Create Palo Alto FQDN objects
+  paloaltonetworks.panos.panos_address_object:
+    provider: "{{ provider | default(omit) }}"
+    name: "{{ item.name }}"
+    address_type: "{{ item.address_type | default('fqdn') }}"
+    value: "{{ item.fqdn }}"
+    description: "{{ item.description | default('') }}"
+    tag: "{{ item.tag | default('') }}"
+    state: present
+  loop: "{{ palo_fw_fqdn_objects }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - palo_fw_fqdn_objects | length > 0
+    - item.name not in (existing_palo_address_object_names | default([]))
+
+- name: Query all Address Objects Groups
+  paloaltonetworks.panos.panos_address_group:
+    provider: "{{ panos_provider }}"
+    state: gathered
+  register: existing_address_groups
+
+- name: Build existing Palo Alto address group names
+  ansible.builtin.set_fact:
+    existing_palo_address_group_names: >-
+      {{
+        (
+          (existing_address_groups.gathered | default([]))
+          + (existing_address_groups.gathered_entries | default([]))
+          + (existing_address_groups.result | default([]))
+        )
+        | selectattr('name', 'defined')
+        | map(attribute='name')
+        | list
+        | unique
+      }}
+
+- name: Print existing Address Groups
+  debug:
+    var: existing_address_groups
+
+- name: Create Palo Alto address groups
+  paloaltonetworks.panos.panos_address_group:
+    provider: "{{ provider | default(omit) }}"
+    name: "{{ item.name }}"
+    static_value: "{{ item.members }}"
+    description: "{{ item.description | default('') }}"
+    tag: "{{ item.tag | default('') }}"
+    state: present
+  loop: "{{ palo_fw_address_groups }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - palo_fw_address_groups | length > 0
+    - item.name not in (existing_palo_address_group_names | default([]))

@@ -1,0 +1,31 @@
+---
+# Example variables for palo_fw_create_obj
+# These mirror the fields used by tasks/main.yml.
+
+palo_fw_ip_objects:
+  - name: "HOST-10.0.0.50"
+    ipv4: "10.0.0.50"
+    description: "Internal web host"
+    tag: "prod"
+
+palo_fw_ip_range_objects:
+  - name: "RANGE-10.0.0.100-10.0.0.150"
+    address_type: "ip-range"
+    ipv4_range: "10.0.0.100-10.0.0.150"
+    description: "Internal application range"
+    tag: "prod"
+
+palo_fw_fqdn_objects:
+  - name: "FQDN-api.example.com"
+    fqdn: "api.example.com"
+    description: "External API FQDN"
+    tag: "prod"
+
+palo_fw_address_groups:
+  - name: "GROUP-APP-STACK"
+    description: "Application stack objects"
+    tag: "prod"
+    members:
+      - "HOST-10.0.0.50"
+      - "RANGE-10.0.0.100-10.0.0.150"
+      - "FQDN-api.example.com"
