@@ -1,0 +1,144 @@
+---
+- name: RHEL 9 DISA STIG Baseline (Demo)
+  hosts: demo_server
+  become: true
+
+  vars:
+    dod_banner: |
+      You are accessing a U.S. Government (USG) Information System (IS) that is provided for USG-authorized use only.
+      By using this IS (which includes any device attached to this IS), you consent to the following conditions:
+      -The USG routinely intercepts and monitors communications on this IS for purposes including, but not limited to, penetration testing, COMSEC monitoring, network operations and defense, personnel misconduct (PM), law enforcement (LE), and counterintelligence (CI) investigations.
+      -At any time, the USG may inspect and seize data stored on this IS.
+      -Communications using, or data stored on, this IS are not private, are subject to routine monitoring, interception, and search, and may be disclosed or used for any USG-authorized purpose.
+      -This IS includes security measures (e.g., authentication and access controls) to protect USG interests--not for your personal benefit or privacy.
+      -Notwithstanding the above, using this IS does not constitute consent to PM, LE or CI investigative searching or monitoring of the content of privileged communications, or work product, related to personal representation or services by attorneys, psychotherapists, or clergy, and their assistants. Such communications and work product are private and confidential. See User Agreement for details.
+
+  tasks:
+    # -------------------------------------------------------------------------
+    # 1. Login Banners (Highly visible in demos, zero functional impact)
+    # -------------------------------------------------------------------------
+    - name: RHEL-09-255025 | Configure Standard Mandatory DoD Login Banners
+      ansible.builtin.copy:
+        content: "{{ dod_banner }}"
+        dest: "{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - /etc/issue
+        - /etc/issue.net
+
+    # -------------------------------------------------------------------------
+    # 2. Safe SSH Hardening (Validated drop-in config; preserves AAP access)
+    # -------------------------------------------------------------------------
+    - name: RHEL-09-255025 / RHEL-09-255100 | Apply Safe SSH Daemon Hardening
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/00-stig-demo.conf
+        owner: root
+        group: root
+        mode: "0600"
+        validate: /usr/sbin/sshd -t -f %s
+        content: |
+          Banner /etc/issue
+          ClientAliveInterval 600
+          ClientAliveCountMax 1
+          PermitEmptyPasswords no
+          IgnoreRhosts yes
+          HostbasedAuthentication no
+          X11Forwarding no
+      notify: Restart sshd
+
+    # -------------------------------------------------------------------------
+    # 3. Password Policy Defaults (Applies only to future password changes)
+    # -------------------------------------------------------------------------
+    - name: RHEL-09-611075 / RHEL-09-611095 | Set Password Aging and Length Defaults
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: "^{{ item.key }}\\s+"
+        line: "{{ item.key }}\t{{ item.value }}"
+      loop:
+        - { key: "PASS_MAX_DAYS", value: "60" }
+        - { key: "PASS_MIN_DAYS", value: "1" }
+        - { key: "PASS_MIN_LEN", value: "15" }
+        - { key: "PASS_WARN_AGE", value: "7" }
+
+    # -------------------------------------------------------------------------
+    # 4. Interactive Shell Timeout (10-minute idle timeout)
+    # -------------------------------------------------------------------------
+    - name: RHEL-09-412035 | Configure Interactive Shell Session Timeout
+      ansible.builtin.copy:
+        dest: /etc/profile.d/tmout.sh
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          #!/bin/bash
+          declare -xr TMOUT=600
+
+    # -------------------------------------------------------------------------
+    # 5. Kernel & Network Sysctl Hardening (Non-disruptive parameters)
+    # -------------------------------------------------------------------------
+    - name: RHEL-09-213070 | Configure Kernel and Network Sysctl Parameters
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/99-stig-demo.conf
+        state: present
+        reload: true
+      loop:
+        - { name: "kernel.randomize_va_space", value: "2" }
+        - { name: "fs.suid_dumpable", value: "0" }
+        - { name: "net.ipv4.conf.all.accept_source_route", value: "0" }
+        - { name: "net.ipv4.conf.default.accept_source_route", value: "0" }
+        - { name: "net.ipv4.conf.all.accept_redirects", value: "0" }
+        - { name: "net.ipv4.conf.default.accept_redirects", value: "0" }
+        - { name: "net.ipv4.icmp_echo_ignore_broadcasts", value: "1" }
+
+    # -------------------------------------------------------------------------
+    # 6. Core Dumps & System Account File Permissions
+    # -------------------------------------------------------------------------
+    - name: RHEL-09-213010 | Disable Core Dumps for All Users
+      ansible.builtin.copy:
+        dest: /etc/security/limits.d/10-stig-coredump.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          * hard core 0
+
+    - name: RHEL-09-232025 | Enforce Permissions on Account Files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        owner: root
+        group: root
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "/etc/passwd", mode: "0644" }
+        - { path: "/etc/group", mode: "0644" }
+        - { path: "/etc/shadow", mode: "0000" }
+        - { path: "/etc/gshadow", mode: "0000" }
+
+    # -------------------------------------------------------------------------
+    # 7. Service & Legacy Package Hygiene
+    # -------------------------------------------------------------------------
+    - name: RHEL-09-215010 | Remove Insecure Legacy Packages if Present
+      ansible.builtin.dnf:
+        name:
+          - telnet-server
+          - rsh-server
+        state: absent
+
+    - name: RHEL-09-653015 | Ensure Audit and Time Sync Services are Enabled
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - auditd
+        - chronyd
+
+  handlers:
+    - name: Restart sshd
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
