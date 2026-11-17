@@ -1,0 +1,85 @@
+---
+- name: Push RHEL 9 Remediation Playbook Directly from Target Servers
+  hosts: appserver
+  become: true
+
+  vars:
+    openscap_dir: /openscap
+    temp_repo_dir: /tmp/securityautomation_repo
+    github_repo: github.com/tellis4151/securityautomation.git
+    github_branch: main
+    github_user: tellis4151
+    github_token: "{{ lookup('env', 'GITHUB_TOKEN') | default('', true) }}"
+    git_author_name: "Ansible Automation ({{ inventory_hostname }})"
+    git_author_email: "troyellis3@gmail.com"
+
+  tasks:
+    - name: Ensure git is installed on target server
+      ansible.builtin.dnf:
+        name: git
+        state: present
+
+    - name: Find generated RHEL 9 remediation playbooks
+      ansible.builtin.find:
+        paths: "{{ openscap_dir }}"
+        patterns: "rhel9-*-remediations-*.yml"
+      register: found_remediations
+
+    - name: Fail if no remediation playbook exists on target
+      ansible.builtin.fail:
+        msg: "No remediation playbook found in {{ openscap_dir }} on {{ inventory_hostname }}."
+      when: found_remediations.matched == 0
+
+    - name: Select the most recent remediation playbook
+      ansible.builtin.set_fact:
+        latest_remediation: "{{ (found_remediations.files | sort(attribute='mtime', reverse=true) | first).path }}"
+
+    - name: Clone, commit, and push directly from target server
+      throttle: 1
+      block:
+        - name: Ensure clean temporary repository directory
+          ansible.builtin.file:
+            path: "{{ temp_repo_dir }}"
+            state: absent
+
+        - name: Clone securityautomation repository on target server
+          ansible.builtin.git:
+            repo: "https://{{ github_user }}:{{ github_token }}@{{ github_repo }}"
+            dest: "{{ temp_repo_dir }}"
+            version: "{{ github_branch }}"
+          no_log: true
+
+        - name: Create host-specific directory in repository
+          ansible.builtin.file:
+            path: "{{ temp_repo_dir }}/remediations/{{ inventory_hostname }}"
+            state: directory
+            mode: "0755"
+
+        - name: Copy remediation playbook into cloned repository on target
+          ansible.builtin.copy:
+            src: "{{ latest_remediation }}"
+            dest: "{{ temp_repo_dir }}/remediations/{{ inventory_hostname }}/{{ latest_remediation | basename }}"
+            remote_src: true
+            mode: "0644"
+
+        - name: Commit and push remediation playbook to GitHub
+          ansible.builtin.shell: |
+            git config user.name "{{ git_author_name }}"
+            git config user.email "{{ git_author_email }}"
+            git add "remediations/{{ inventory_hostname }}/"
+            if [ -n "$(git status --porcelain)" ]; then
+              git commit -m "Add RHEL 9 DISA STIG remediation for {{ inventory_hostname }} ({{ ansible_date_time.iso8601 }})"
+              git pull --rebase origin "{{ github_branch }}"
+              git push origin "{{ github_branch }}"
+            fi
+          args:
+            chdir: "{{ temp_repo_dir }}"
+          register: git_push_result
+          changed_when: "'->' in git_push_result.stderr or '->' in git_push_result.stdout"
+          no_log: true
+
+      always:
+        - name: Remove temporary repository directory and cached token
+          ansible.builtin.file:
+            path: "{{ temp_repo_dir }}"
+            state: absent
