@@ -1,0 +1,51 @@
+---
+- name: OpenSCAP Install & RHEL 9 DISA STIG Scanning
+  hosts: appserver
+  become: true
+
+  vars:
+    profile: xccdf_org.ssgproject.content_profile_stig
+    fix_type: ansible
+    scap_datastream: /usr/share/xml/scap/ssg/content/ssg-rhel9-ds.xml
+    output_dir: /openscap
+
+  tasks:
+    - name: Install OpenSCAP Scanner and Security Guide
+      ansible.builtin.dnf:
+        name:
+          - openscap-scanner
+          - scap-security-guide
+        state: latest
+
+    - name: Get timestamp
+      ansible.builtin.command: date +%Y%m%d_%H%M%S
+      register: timestamp
+      changed_when: false
+
+    - name: Create OpenSCAP Directory
+      ansible.builtin.file:
+        path: "{{ output_dir }}"
+        state: directory
+        mode: "0775"
+
+    - name: Scan System Against RHEL 9 DISA STIG and Generate Report
+      ansible.builtin.command:
+        cmd: >
+          oscap xccdf eval
+          --profile {{ profile }}
+          --results {{ output_dir }}/rhel9-{{ profile }}-results-{{ timestamp.stdout }}.xml
+          --report {{ output_dir }}/rhel9-{{ profile }}-report-{{ timestamp.stdout }}.html
+          {{ scap_datastream }}
+      register: oscap_scan
+      failed_when: oscap_scan.rc not in [0, 2]
+      changed_when: false
+
+    - name: Generate Remediation Playbook
+      ansible.builtin.command:
+        cmd: >
+          oscap xccdf generate fix
+          --fix-type {{ fix_type }}
+          --profile {{ profile }}
+          --output {{ output_dir }}/rhel9-{{ profile }}-remediations-{{ timestamp.stdout }}.yml
+          {{ output_dir }}/rhel9-{{ profile }}-results-{{ timestamp.stdout }}.xml
+      changed_when: true
