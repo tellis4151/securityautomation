@@ -1,0 +1,40 @@
+---
+- name: Standardize RHEL System Files on EC2
+  hosts: demo_server
+  become: true
+
+  vars_files:
+    - vars/system_baseline.yml
+
+  tasks:
+    - name: Enforce standard system files, ownership, and permissions
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+        validate: "{{ item.validate | default(omit) }}"
+      loop: "{{ managed_system_files }}"
+      loop_control:
+        label: "{{ item.dest }}"
+      register: baseline_apply
+
+    - name: Reload sshd if SSH drop-in file was updated
+      ansible.builtin.service:
+        name: sshd
+        state: reloaded
+      when: >
+        baseline_apply.results
+        | selectattr('item.dest', 'equalto', '/etc/ssh/sshd_config.d/10-org-standard.conf')
+        | selectattr('changed', 'equalto', true)
+        | list | length > 0
+
+    - name: Apply sysctl settings if kernel drop-in file was updated
+      ansible.builtin.command: sysctl -p /etc/sysctl.d/99-org-standard.conf
+      changed_when: true
+      when: >
+        baseline_apply.results
+        | selectattr('item.dest', 'equalto', '/etc/sysctl.d/99-org-standard.conf')
+        | selectattr('changed', 'equalto', true)
+        | list | length > 0

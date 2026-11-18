@@ -1,0 +1,73 @@
+---
+- name: Check Compliance and Remediate RHEL System Files on EC2
+  hosts: demo_server
+  become: true
+
+  vars:
+    auto_remediate: true
+
+  vars_files:
+    - vars/system_baseline.yml
+
+  tasks:
+    # -------------------------------------------------------------------------
+    # Phase 1: Non-Destructive Compliance Audit
+    # -------------------------------------------------------------------------
+    - name: Audit managed system files for content or permission drift
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      loop: "{{ managed_system_files }}"
+      loop_control:
+        label: "{{ item.dest }}"
+      check_mode: true
+      diff: true
+      register: audit_results
+
+    - name: Collect list of out-of-compliance files
+      ansible.builtin.set_fact:
+        drifted_files: "{{ audit_results.results | selectattr('changed', 'equalto', true) | map(attribute='item') | list }}"
+
+    - name: Report compliance status
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'COMPLIANT: All managed system files match the standard.'
+             if (drifted_files | length == 0)
+             else 'OUT OF COMPLIANCE (' + (drifted_files | length | string) + ' file(s) drifted): '
+                  + (drifted_files | map(attribute='dest') | join(', ')) }}
+
+    # -------------------------------------------------------------------------
+    # Phase 2: Automatic Remediation
+    # -------------------------------------------------------------------------
+    - name: Remediate out-of-compliance system files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+        validate: "{{ item.validate | default(omit) }}"
+      loop: "{{ drifted_files }}"
+      loop_control:
+        label: "{{ item.dest }}"
+      when:
+        - auto_remediate | bool
+        - drifted_files | length > 0
+
+    - name: Reload sshd if SSH configuration was remediated
+      ansible.builtin.service:
+        name: sshd
+        state: reloaded
+      when:
+        - auto_remediate | bool
+        - "'/etc/ssh/sshd_config.d/10-org-standard.conf' in (drifted_files | map(attribute='dest') | list)"
+
+    - name: Reload sysctl if kernel parameters were remediated
+      ansible.builtin.command: sysctl -p /etc/sysctl.d/99-org-standard.conf
+      changed_when: true
+      when:
+        - auto_remediate | bool
+        - "'/etc/sysctl.d/99-org-standard.conf' in (drifted_files | map(attribute='dest') | list)"
