@@ -1,6 +1,6 @@
 ---
 - name: RHEL 9 DISA STIG Baseline (Demo)
-  hosts: demo_server
+  hosts: cloud_servers
   become: true
 
   vars:
