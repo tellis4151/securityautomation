@@ -1,6 +1,6 @@
 ---
 - name: Restore an EC2 instance volume from an EBS snapshot
-  hosts: localhost
+  hosts: cloud_servers
   connection: local
   gather_facts: false
 
