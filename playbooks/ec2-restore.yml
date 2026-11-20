@@ -1,0 +1,98 @@
+---
+- name: Restore an EC2 instance volume from an EBS snapshot
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    aws_region: us-east-1
+   # instance_id: i-0123456789abcdef0
+   # snapshot_id: snap-0123456789abcdef0
+   # volume_type: gp3
+    # Optional: Leave undefined to restore the root volume automatically,
+    # or specify a secondary device path (e.g., /dev/sdf) for a data volume.
+    # device_name: /dev/sdf
+
+  tasks:
+    - name: Gather target EC2 instance details
+      amazon.aws.ec2_instance_info:
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+      register: ec2_info
+
+    - name: Validate that the target EC2 instance exists
+      ansible.builtin.assert:
+        that:
+          - ec2_info.instances | length == 1
+        fail_msg: "EC2 instance {{ instance_id }} was not found in {{ aws_region }}."
+
+    - name: Set instance metadata and target device path
+      ansible.builtin.set_fact:
+        instance_data: "{{ ec2_info.instances[0] }}"
+        instance_az: "{{ ec2_info.instances[0].placement.availability_zone }}"
+        target_device: "{{ device_name | default(ec2_info.instances[0].root_device_name) }}"
+
+    - name: Find existing volume attached to target device
+      ansible.builtin.set_fact:
+        matching_mappings: >-
+          {{
+            instance_data.block_device_mappings
+            | selectattr('device_name', 'equalto', target_device)
+            | list
+          }}
+
+    - name: Record current volume ID if attached
+      ansible.builtin.set_fact:
+        current_volume_id: "{{ matching_mappings[0].ebs.volume_id }}"
+      when: matching_mappings | length > 0
+
+    - name: Create new EBS volume from snapshot in matching AZ
+      amazon.aws.ec2_vol:
+        region: "{{ aws_region }}"
+        zone: "{{ instance_az }}"
+        snapshot: "{{ snapshot_id }}"
+        volume_type: "{{ volume_type }}"
+        state: present
+        tags:
+          Name: "{{ instance_id }}-restored-{{ snapshot_id }}"
+          RestoredFromSnapshot: "{{ snapshot_id }}"
+      register: restored_volume
+
+    - name: Stop the EC2 instance before swapping volumes
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+        state: stopped
+        wait: true
+
+    - name: Detach the existing volume (retained for rollback)
+      amazon.aws.ec2_vol:
+        region: "{{ aws_region }}"
+        id: "{{ current_volume_id }}"
+        instance: None
+      when: current_volume_id is defined
+
+    - name: Attach the restored volume to the original device name
+      amazon.aws.ec2_vol:
+        region: "{{ aws_region }}"
+        id: "{{ restored_volume.volume_id }}"
+        instance: "{{ instance_id }}"
+        device_name: "{{ target_device }}"
+        delete_on_termination: true
+
+    - name: Start the restored EC2 instance
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+        state: running
+        wait: true
+
+    - name: Output restoration summary
+      ansible.builtin.debug:
+        msg: >-
+          Instance {{ instance_id }} is running with restored volume
+          {{ restored_volume.volume_id }} on {{ target_device }}.
+          Previous volume {{ current_volume_id | default('none') }} remains detached.
